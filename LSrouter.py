@@ -30,18 +30,18 @@ class LSrouter(Router):
         file_handler.setFormatter(formatter)
         self.logger.handlers = []
         self.logger.addHandler(file_handler)
-        self.logger.info(f"Khởi động router {addr} với thời gian phát {heartbeat_time} ms")
+        self.logger.info(f"Khoi dong router {addr} voi thoi gian phat {heartbeat_time} ms")
 
     def handle_packet(self, port, packet):
         """Xử lý gói tin đến từ cổng."""
-        self.logger.info(f"Nhận gói từ cổng {port}, nguồn {packet.src_addr}, đích {packet.dst_addr}, traceroute: {packet.is_traceroute}")
+        self.logger.info(f"Nhan goi tu cong {port}, nguon {packet.src_addr}, dich {packet.dst_addr}, traceroute: {packet.is_traceroute}")
         if packet.is_traceroute:
             if packet.dst_addr in self.forwarding_table:
                 out_port = self.forwarding_table[packet.dst_addr]
-                self.logger.info(f"Chuyển gói traceroute đến {packet.dst_addr} qua cổng {out_port}")
+                self.logger.info(f"Chuyen goi traceroute den {packet.dst_addr} qua cong {out_port}")
                 self.send(out_port, packet)
             else:
-                self.logger.info(f"Không có đường đến đích {packet.dst_addr}")
+                self.logger.info(f"Khong co duong den dich {packet.dst_addr}")
             return
 
         try:
@@ -49,26 +49,26 @@ class LSrouter(Router):
             src_addr = ls_info['src_addr']
             sequence_number = ls_info['sequence_number']
             link_state = ls_info['link_state']
-            self.logger.info(f"Nhận LSP từ {src_addr}, số thứ tự {sequence_number}, liên kết: {link_state}")
+            self.logger.info(f"Nhan LSP tu {src_addr}, so thu tu {sequence_number}, lien ket: {link_state}")
             is_new_or_updated = False
             if src_addr not in self.link_state_db or sequence_number > self.link_state_db[src_addr][0]:
                 is_new_or_updated = True
                 self.link_state_db[src_addr] = (sequence_number, link_state)
-                self.logger.info(f"Cập nhật link_state_db cho {src_addr}, số thứ tự {sequence_number}")
+                self.logger.info(f"Cap nhat link_state_db cho {src_addr}, so thu tu {sequence_number}")
                 self.update_forwarding_table()
                 for neighbor_port in self.neighbors:
                     if neighbor_port != port:
-                        self.logger.info(f"Phát LSP từ {src_addr} đến hàng xóm qua cổng {neighbor_port}")
+                        self.logger.info(f"Phat LSP tu {src_addr} den hang xom qua cong {neighbor_port}")
                         self.send(neighbor_port, packet)
             else:
-                self.logger.info(f"Bỏ LSP cũ từ {src_addr}, số thứ tự {sequence_number}")
+                self.logger.info(f"Bo LSP cu tu {src_addr}, so thu tu {sequence_number}")
         except json.JSONDecodeError:
-            self.logger.info(f"Gói từ cổng {port} không đúng định dạng")
+            self.logger.info(f"Goi tu cong {port} khong dung dinh dang")
 
     def handle_new_link(self, port, endpoint, cost):
         """Thêm liên kết mới đến hàng xóm."""
         self.neighbors[port] = (endpoint, cost)
-        self.logger.info(f"Thêm liên kết đến {endpoint} qua cổng {port}, chi phí {cost}")
+        self.logger.info(f"Them lien ket den {endpoint} qua cong {port}, chi phi {cost}")
         self.update_own_link_state()
         self.update_forwarding_table()
         self.broadcast_link_state()
@@ -76,10 +76,10 @@ class LSrouter(Router):
     def handle_remove_link(self, port):
         """Xóa liên kết với hàng xóm."""
         if port not in self.neighbors:
-            self.logger.info(f"Cổng {port} không có liên kết")
+            self.logger.info(f"Cong {port} khong co lien ket")
             return
         neighbor, _ = self.neighbors[port]
-        self.logger.info(f"Xóa liên kết đến {neighbor} tại cổng {port}")
+        self.logger.info(f"Xoa lien ket den {neighbor} tai cong {port}")
         del self.neighbors[port]
         self.update_own_link_state()
         self.update_forwarding_table()
@@ -89,7 +89,7 @@ class LSrouter(Router):
         """Xử lý thời gian để gửi LSP định kỳ."""
         if time_ms - self.last_time >= self.heartbeat_time:
             self.last_time = time_ms
-            self.logger.info(f"Phát LSP định kỳ tại {time_ms} ms")
+            self.logger.info(f"Phat LSP dinh ky tai {time_ms} ms")
             self.broadcast_link_state()
 
     def update_own_link_state(self):
@@ -97,11 +97,11 @@ class LSrouter(Router):
         new_link_state = {neighbor: cost for _, (neighbor, cost) in self.neighbors.items()}
         self.sequence_number += 1
         self.link_state_db[self.addr] = (self.sequence_number, new_link_state)
-        self.logger.info(f"Cập nhật link_state_db của {self.addr}, số thứ tự {self.sequence_number}")
+        self.logger.info(f"Cap nhat link_state_db cua {self.addr}, so thu tu {self.sequence_number}")
 
     def update_forwarding_table(self):
         """Tính bảng chuyển tiếp bằng Dijkstra."""
-        self.logger.info(f"Tính bảng chuyển tiếp với link_state_db: {self.link_state_db}")
+        self.logger.info(f"Tinh bang chuyen tiep voi link_state_db: {self.link_state_db}")
         graph = {}
         for router, (_, link_state) in self.link_state_db.items():
             graph[router] = link_state
@@ -119,10 +119,10 @@ class LSrouter(Router):
             for port, (neighbor, _) in self.neighbors.items():
                 if neighbor == next_hop:
                     new_forwarding_table[dest] = port
-                    self.logger.info(f"Thêm đường đến {dest} qua cổng {port}, bước nhảy {next_hop}, chi phí {distances[dest]}")
+                    self.logger.info(f"Them duong den {dest} qua cong {port}, buoc nhay {next_hop}, chi phi {distances[dest]}")
                     break
         self.forwarding_table = new_forwarding_table
-        self.logger.info(f"Bảng chuyển tiếp mới: {self.forwarding_table}")
+        self.logger.info(f"Bang chuyen tiep moi: {self.forwarding_table}")
 
     def dijkstra(self, graph, source):
         """Tìm đường ngắn nhất bằng thuật toán Dijkstra."""
@@ -142,7 +142,7 @@ class LSrouter(Router):
                     distances[neighbor] = distance
                     predecessors[neighbor] = current_node
                     heapq.heappush(pq, (distance, neighbor))
-                    self.logger.info(f"Cập nhật chi phí đến {neighbor}: {distance} qua {current_node}")
+                    self.logger.info(f"Cap nhat chi phi den {neighbor}: {distance} qua {current_node}")
         return distances, predecessors
 
     def broadcast_link_state(self):
@@ -156,7 +156,7 @@ class LSrouter(Router):
         content_str = json.dumps(ls_content)
         packet = Packet(Packet.ROUTING, self.addr, None, content_str)
         for port, (neighbor, _) in self.neighbors.items():
-            self.logger.info(f"Gửi LSP đến {neighbor} qua cổng {port}, số thứ tự {self.sequence_number}")
+            self.logger.info(f"Gui LSP den {neighbor} qua cong {port}, so thu tu {self.sequence_number}")
             self.send(port, packet)
 
     def __repr__(self):
