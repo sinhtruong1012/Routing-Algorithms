@@ -33,50 +33,50 @@ class DVrouter(Router):
         file_handler.setFormatter(formatter)
         self.logger.handlers = []
         self.logger.addHandler(file_handler)
-        self.logger.info(f"Khởi động router {addr} với thời gian phát {heartbeat_time} ms")
+        self.logger.info(f"Khoi dong router {addr} voi thoi gian phat {heartbeat_time} ms")
 
     def handle_packet(self, port, packet):
         """Xử lý gói tin đến từ cổng."""
-        self.logger.info(f"Nhận gói từ cổng {port}, nguồn {packet.src_addr}, đích {packet.dst_addr}")
+        self.logger.info(f"Nhan goi tu cong {port}, nguon {packet.src_addr}, dich {packet.dst_addr}")
         if packet.is_traceroute:
             if packet.dst_addr in self.forwarding_table:
                 out_port = self.forwarding_table[packet.dst_addr]
-                self.logger.info(f"Chuyển gói traceroute đến {packet.dst_addr} qua cổng {out_port}")
+                self.logger.info(f"Chuyen goi traceroute den {packet.dst_addr} qua cong {out_port}")
                 self.send(out_port, packet)
             else:
-                self.logger.info(f"Không có đường đến đích {packet.dst_addr}")
+                self.logger.info(f"Khong co duong den dich {packet.dst_addr}")
             return
 
         try:
             src = packet.src_addr
             received_dv = json.loads(packet.content)
             if src not in [addr for _, (addr, _) in self.neighbors.items()]:
-                self.logger.info(f"Bỏ bảng từ {src} vì không phải hàng xóm")
+                self.logger.info(f"Bo bang tu {src} vi khong phai hang xom")
                 return
             if src not in self.neighbor_dv or self.neighbor_dv[src] != received_dv:
                 self.neighbor_dv[src] = received_dv
-                self.logger.info(f"Nhận bảng định tuyến từ {src}: {received_dv}")
+                self.logger.info(f"Nhan bang dinh tuyen tu {src}: {received_dv}")
                 self.update_distance_vector()
                 self.broadcast_distance_vector()
         except json.JSONDecodeError:
-            self.logger.info(f"Gói từ cổng {port} không đúng định dạng")
+            self.logger.info(f"Goi tu cong {port} khong dung dinh dang")
 
     def handle_new_link(self, port, endpoint, cost):
         """Thêm liên kết mới đến hàng xóm."""
         self.neighbors[port] = (endpoint, cost)
         self.distance_vector[endpoint] = cost
         self.forwarding_table[endpoint] = port
-        self.logger.info(f"Thêm liên kết đến {endpoint} qua cổng {port}, chi phí {cost}")
+        self.logger.info(f"Them lien ket den {endpoint} qua cong {port}, chi phi {cost}")
         self.update_distance_vector()
         self.broadcast_distance_vector()
 
     def handle_remove_link(self, port):
         """Xóa liên kết với hàng xóm."""
         if port not in self.neighbors:
-            self.logger.info(f"Cổng {port} không có liên kết")
+            self.logger.info(f"Cong {port} khong co lien ket")
             return
         neighbor, _ = self.neighbors[port]
-        self.logger.info(f"Xóa liên kết đến {neighbor} tại cổng {port}")
+        self.logger.info(f"Xoa lien ket den {neighbor} tai cong {port}")
         del self.neighbors[port]
         self.neighbor_dv.pop(neighbor, None)
         self.distance_vector.pop(neighbor, None)
@@ -127,8 +127,8 @@ class DVrouter(Router):
             changed = True
             self.distance_vector = new_dv
             self.forwarding_table = new_ft
-            self.logger.info(f"Cập nhật bảng định tuyến: {self.distance_vector}")
-            self.logger.info(f"Cập nhật bảng chuyển tiếp: {self.forwarding_table}")
+            self.logger.info(f"Cap nhat bang dinh tuyen: {self.distance_vector}")
+            self.logger.info(f"Cap nhat bang chuyen tiep: {self.forwarding_table}")
 
         return changed
 
@@ -138,7 +138,7 @@ class DVrouter(Router):
         packet = Packet(Packet.ROUTING, self.addr, None, json.dumps(dv_content))
         for port in self.neighbors:
             self.send(port, packet)
-            self.logger.info(f"Đã gửi bảng định tuyến đến hàng xóm qua cổng {port}: {dv_content}")
+            self.logger.info(f"Da gui bang dinh tuyen den hang xom qua cong {port}: {dv_content}")
         self.last_broadcast_dv = dv_content
 
     def __repr__(self):
